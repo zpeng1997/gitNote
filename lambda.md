@@ -76,3 +76,69 @@ auto y = [&r = x, x = x + 1]()->int
 - avoid default capture modes, like [=] or [&]
 
 # 战术放弃, 以后继续, ODR这东西有点复杂
+
+## lambda真的没有名字吗?
+```C++
+[]{return flag;}
+//C++11语法规范, 编译后是什么样子, __lambda_xx_xx命名
+class __lambda_16_27
+{
+    public: 
+    inline /*constexpr */ bool operator()() const
+    {
+        return flag;
+    }
+    
+    using retType_16_27 = auto (*)() -> bool;
+    inline /*constexpr */ operator retType_16_27 () const noexcept
+    {
+        return __invoke;
+    };
+    
+    private: 
+    static inline bool __invoke() // 被调用的函数, 再类中以static形式存在
+    {
+        return flag;
+    }
+    public:
+    // /*constexpr */ __lambda_16_27() = default;
+} __lambda_16_27{};
+```
+- 如果加上mutable呢?
+```C++
+[] ()mutable {return !flag;}
+// 看看C++11语法下编译后是什么样子:
+class __lambda_28_27
+{
+    public: 
+    inline /*constexpr */ bool operator()() // 变化一: 没有const
+    {
+        return !flag;
+    }
+    
+    // 这里是干什么用的?
+    // 无捕获的非泛型 lambda(from cppreference.com)
+    
+    // C++ 17前
+    // using F = ret(*)(形参);
+    // operator F() const;
+    
+    // C++17后
+    // using F = ret(*)(形参);
+    // constexpr operator F() const;
+    using retType_28_27 = bool (*)();
+    inline /*constexpr */ operator retType_28_27 () const noexcept
+    {
+        return __invoke;
+    };
+    
+    private: 
+    static inline bool __invoke()
+    {
+        return !flag;
+    }
+
+    public:
+    // /*constexpr */ __lambda_28_27() = default;
+} __lambda_28_27{};
+```
