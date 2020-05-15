@@ -137,6 +137,6 @@ enum {SIZE_X = a.x, SIZE_Y = a.y};
     - 是一种很强的约束，更好地保证程序的正确语义不被破坏。
     - 编译器可以在编译期对constexpr的代码进行非常大的优化，比如将用到的constexpr表达式都直接替换成最终结果等。
     - 相比宏来说，没有额外的开销，但更安全可靠。
-    - 为什么要有constexpr? 自己去Google或者stackoverflow:)
+    - 为什么要有constexpr? 自己去Google或者stackoverflow:) 
 
 
