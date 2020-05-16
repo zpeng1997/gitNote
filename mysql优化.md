@@ -301,4 +301,6 @@ Q6: ROLLBACK TO SAVEPOINT sp; // 回滚到SAVEPOINT sp;
 // 第一种: 直接执行 delete from T limit 10000;
 // 第二种: 在一个连接中循环执行20次 delete from T limit 500;
 // 第三种: 在20个链接中同时执行delete from T limit 500;
+// 第二种相对较好, 第一种锁的时间长, 而且大事务还会导致主从延误
+// 第三种方式: 会认为造成锁冲突.
 ```
