@@ -320,3 +320,20 @@ mysql> select id, name, email from SUser where email='zhangssxyz@xxx.com';
         - (1) 表本身没有空洞, 但是DDL期间, 刚好有外部的DML执行, 会引入空洞
         - (2) 重建表的时候, InnoDB不会吧整张表占满, 每个页留下了1/16给后续的更新用. 也就是重建表后不是"最"紧凑的.
         
+## 14.count(*)这么慢, 我该怎么办?
+- count(*)的实现方式:
+    - MyISAM引擎把一个表的总行数存在了磁盘上, 因此执行count(*)的时候会直接返回这个数, 效率很高. 但是加上where语句, 也不会很快.
+    - InnoDB引擎, 执行count(*)的时候, 需要把数据一行一行的从引擎里面读出来,然后累计计数.
+    - 为什么InnoDB不和MyISAM一样记录数字呢? 答: 即使在同一时刻的多个查询, 由多版本并发控制(MVCC)的原因, InnoDB表"应该返回多少行"也是不确定的(不一样).
+- count(*)的优化, 主键索引树的叶子节点是数据,而普通索引的叶子节点是主键值,普通索引比主键索引树小很多,对于cout(*)这样的操作, 遍历那个索引树上都是一样的, MySQL找到最小的那棵树遍历.
+- `` show table status 中的 TABLE_ROWS 也只是估算, 不准确. ``
+- 缓存系统保存计数
+    - redis缓存, 因为支持事务, 导致拿到的和redis中并不总是一样的
+    - InnoDB表中, 逻辑上可以保持一致.
+- 不同count的用法:  cout(字段) < count(主键,id) < count(1) ~ count(*)
+    - count(主键,id) 遍历整张表拿到id, 给server, server判断id不为空, 累加
+    - count(1) 比上面快, 因为没有解析数据行 和 拷贝字段值的操作
+    - count(字段) 
+        - 允许为not null, 一行一行读, 判断不为null, 累加
+        - 允许为null, 一行一行读, 判断可能null, 取出来判断后, 累加
+    - count(*) 肯定不是空, 按行累加
