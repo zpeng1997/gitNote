@@ -200,3 +200,41 @@ explain select * from t where a between 10000 and 20000;
 
 
 ## 11.如何给字符串段加索引？
+```C++
+mysql> create table SUser(
+    ID bigint unsigned primary key,
+    email varchar(64),
+    ...
+)engine=innodb;
+
+mysql> select f1, f2 from SUser where email='xxx';
+// 创建索引
+mysql> alter table SUser add index index1(email); // 没有声明长度, 默认整个字符串.
+或者
+mysql> alter table SUser add index index2(email(6)); // 前6个字节, 占用空间小, 这就是说使用前缀索引的优势; 损失: 可能会增加额外的记录扫描次数.
+// 对于以下语句:
+mysql> select id, name, email from SUser where email='zhangssxyz@xxx.com';
+```
+- 如果是使用index1:
+    - 从index1索引树找到满足索引值是'zhangssxyz@xxx.com'的这条记录, 取得ID2的值
+    - 到主键上查到主键值是ID2的行, 判断email的值是否正确的, 将这行记录加入结果集.
+    - 取index1索引树上刚刚查到的位置的下一条记录, 发现已经不满足email='zhangssxyz@xxx.com'的条件, 循环结束.(只扫描了一行个)
+- 如果是使用index2:
+    - 从index2索引树找到满足索引值是'zhangs'的记录, 找到的第一个是ID1
+    - 到主键上查到主键值是ID1的行, 判断出email的值不是'zhangssxyz@xxx.com',着行记录丢弃
+    - 取下一行, 发现还是‘zhangs’,取出ID2找到整行判断, 这次值对了, 将这行记录加入结果集.
+    - 重复上一步, 直到在index2上取到的值不是‘zhangs’, 循环结束
+    - 但是有什么方法可以确定我应该使用多长的前缀呢?
+        - `` select count(distinct email) as L from SUser; // 判断有多少个不同的值``
+        - `` mysql> select count(distinct left(email, 4)) as L4,  select count(distinct left(email, 5)) as L5, select count(distinct left(email, 6)) as L6, select count(distinct left(email, 7)) as L7, from SUser;``
+        - 前缀索引没有覆盖索引的优化, (即使你定义的是index(email(18)),他还是会去回表一次, 因为它不确定是否是完整的.)
+- 其它方式: 同一个县城的人身份证号前6位一般会是相同的, 那么利用前六位就是浪费的
+    - 1.倒序存储: ``mysql> select field_list from t where id_card = reverse('input_id_card_string'); ``
+    - 2.hash字段:  `` alter table t add id_card_crc int unsigned, add index (id_card_crc); // 每次插入新纪录的时候, 都同时用crc32()这个函数得到校验码填到这个字段, 由于可能存在冲突``
+        - `` mysql> select field_list from t where id_car_crc=crc32('input_id_card_string') and id_card='input_id_card_string'; // 把身份证加上即可, 但是索引变为4字节, 小了很多`` 
+    - disadvantage: 以上两种方法都不支持范围查询.
+    - 场景题: 一个学校的登录系统, 前六位相同, 中间九位是年份加顺序号, 后面@gmail.com,请问如何设计?
+        - (1) 利用把中间九位放到int中,利用的就是hash的思想
+        - (2) 一个学校总人数不多, 50年才100万, 为了业务简单直接存原来的字符串.
+        - (3) 还有一个极致的方向, 看不到评论, 我就不写了.
+
