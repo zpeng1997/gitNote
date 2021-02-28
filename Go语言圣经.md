@@ -29,9 +29,9 @@ go get github.com/gin-gonic/gin
 * 自增语句i++给i加1；这和i += 1以及i = i + 1都是等价的。对应的还有i--给i减1。它们是语句，而不像C系的其它语言那样是表达式。所以j = i++非法，而且++和--都只能放在变量名后面，因此--i也非法
 * for循环三个部分不需括号包围。大括号强制要求, 左大括号必须和post语句在同一行。for循环的这三个部分每个都可以省略，如果省略initialization和post，分号也可以省略。如果连condition也省略了, 这就变成一个无限循环，尽管如此，还可以用其他方式终止循环, 如一条break或return语句。
 * for的另一种形式: 在某种数据类型的区间（range）上遍历，如字符串或切片.
-```go
-package main
-
+* 1.命名: 包的名字小写, 包中可以导出的首字母大写; 一般而言, Go语言习惯于短变量命名, 一般声明周期越长, 作用域越大, 其名字也就越长. 驼峰式, 一般不用下划线.
+* 2.声明: 全局(属于对应的包)、局部(只属于对应的函数). 
+```C++
 import (
     "fmt"
     "os"
@@ -72,6 +72,53 @@ func main() {
 		fmt.Printf("%d: %s\n", i, arg)
 	}
 }
+```
+* 3.变量
+```go
+// var 变量名字 类型 = 表达式
+var i, j, k int                 // int, int, int
+var b, f, s = true, 2.3, "four" // bool, float64, string
+// 在包级别声明的变量会在main入口函数执行前完成初始化
+// 局部变量将在声明语句被执行到的时候完成初始化
+var f, err = os.Open(name)
+// 一组变量也可以通过调用一个函数，由函数返回的多个返回值初始化：
+
+// 简短声明变量(适用于函数内部), 名字:=表达式
+anim := git.GIF{LoopCount, nframes}
+freq := rand.Float64() * 3.0
+t := 0.0
+
+// var形式的声明语句往往是用于需要显式指定变量类型的地方
+// 或者因为变量稍后会被重新赋值而初始值无关紧要的地方。
+i := 100                  // an int
+var boiling float64 = 100 // a float64
+var names []string
+var err error
+var p Point
+// 初始化一组变量, 只适用于提高代码可读性的地方, 例如for循环内部
+i, j := 1, 3
+// 请记住“:=”是一个变量声明语句，而“=”是一个变量赋值操作
+// 也不要混淆多个变量的声明和元组的多重赋值
+
+// 简短声明, 有时候并不是声明操作
+// 第一个语句声明了in和err两个变量。
+// 在第二个语句只声明了out一个变量，然后对已经声明的err进行了赋值操作。
+in, err := os.Open(infile)
+out, err := os.Create(outfile)
+// 简短变量声明语句中必须至少要声明一个新的变量，下面的代码将不能编译通过：
+f, err := os.Open(infile)
+f, err := os.Create(outfile) // compile error: no new variables
+// 解决的方法是第二个简短变量声明语句改用普通的多重赋值语句
+f, err = os.Create(outfile) // right!
+```
+* 4.指针
+```go
+// 
+x := 1
+p := &x         // p, of type *int, points to x
+fmt.Println(*p) // "1"
+*p = 2          // equivalent to x = 2
+fmt.Println(x)  // "2"
 ```
 
 ## 遇到的问题
