@@ -98,6 +98,7 @@ var p Point
 // 初始化一组变量, 只适用于提高代码可读性的地方, 例如for循环内部
 i, j := 1, 3
 // 请记住“:=”是一个变量声明语句，而“=”是一个变量赋值操作
+// 简洁赋值语句 := 可在类型明确的地方代替 var 声明
 // 也不要混淆多个变量的声明和元组的多重赋值
 
 // 简短声明, 有时候并不是声明操作
@@ -119,7 +120,229 @@ p := &x         // p, of type *int, points to x
 fmt.Println(*p) // "1"
 *p = 2          // equivalent to x = 2
 fmt.Println(x)  // "2"
+// 在Go语言中，返回函数中局部变量的地址也是安全的
+var p = f()
+func f() *int{
+    v := 1;
+    return &v;
+}
+// 每次调用f函数都将返回不同的结果
+fmt.Println(f() == f()) 
+// 由于new只是一个预定义的函数，它并不是一个关键字，因此我们可以将new名字重新定义为别的类型。例如下面的例子：
 ```
+* 5. 声明周期
+```c++
+// 而相比之下，局部变量的生命周期则是动态的：
+// 每次从创建一个新变量的声明语句开始，直到该变量不再被引用为止
+```
+* 6. 返回值
+```go
+func split(sum int) (x, y int) {
+	x = sum * 4 / 9
+	y = sum - x
+	return
+}
+
+func main() {
+	fmt.Println(split(17))
+}
+```
+* 7. if,else 局部变量的作用范围
+* 在 if 的简短语句中声明的变量同样可以在任何对应的 else 块中使用
+* defer 语句
+```go
+package main
+import "fmt"
+
+func main() {
+	defer fmt.Println("world")
+
+	fmt.Println("hello")
+}
+
+// 而且是压入栈中, 函数返回后依次调用
+func main() {
+	fmt.Println("counting")
+
+	for i := 0; i < 10; i++ {
+		defer fmt.Println(i)
+	}
+
+	fmt.Println("done")
+}
+```
+* 数组
+```go
+func main(){
+    var a [2]string
+    a[0] = "Hello"
+    a[1] = "World"
+
+    primes := [6]int{2, 3, 5, 7, 11, 13}
+	fmt.Println(primes)
+    // 切片就像数组的引用
+    var s []int = primes[1:4]
+    fmt.Println(s)
+    s[0] = 9 // 会改变primes[1]的值
+
+    // 类似c++的 vector<pair<int, bool>>
+    s := []struct {
+		i int
+		b bool
+	}{
+		{2, true},
+		{3, false},
+		{5, true},
+		{7, true},
+		{11, false},
+		{13, true},
+	}
+
+    a := make([]int, 5)
+    // a len=5 cap=5 [0 0 0 0 0]
+    b := make([]int, 0, 5)
+    // b len=0 cap=5 []
+    c := b[:2]
+    // c len=2 cap=5 [0 0]
+    d := c[2:5]
+    // d len=3 cap=3 [0 0 0]
+
+    // append 函数 可向切片追加元素
+    // 这个切片会按需增长
+	s = append(s, 1)
+    // range 遍历, _ 忽略变量
+}
+```
+* map映射
+```go
+type Vertex struct {
+	Lat, Long float64
+}
+
+var m = map[string]Vertex{
+	"Bell Labs": Vertex{
+		40.68433, -74.39967,
+	},
+	"Google": Vertex{
+		37.42202, -122.08408,
+	},
+}
+```
+* 函数可以作为参数和返回值
+```go
+func compute(fn func(float64, float64) float64) float64 {
+	return fn(3, 4)
+}
+
+func main() {
+	hypot := func(x, y float64) float64 {
+		return math.Sqrt(x*x + y*y)
+	}
+	fmt.Println(hypot(5, 12))
+
+	fmt.Println(compute(hypot))
+	fmt.Println(compute(math.Pow))
+}
+```
+* 方法
+```go
+// 方法接收者在它自己的参数列表内，位于 func 关键字和方法名之间。
+// 在此例中，Abs 方法拥有一个名为 v，类型为 Vertex 的接收者
+// 听着很玄虚 --> 就是的成员函数
+type Vertex struct {
+	X, Y float64
+}
+
+// func Vectoex::Abs() float64{
+// 这样是不是好理解多了
+// }
+// 不一样的是, 这里的方法接收者
+// 不是类的方法, 而是对象的方法,
+// 把下面 (v Vertex), 则必须有一个Vertex 的变量v来访问.
+func (v Vertex) Abs() float64 {
+	return math.Sqrt(v.X*v.X + v.Y*v.Y)
+}
+
+func main() {
+	v := Vertex{3, 4}
+	fmt.Println(v.Abs())
+}
+
+// 这意味着对于某类型 T，接收者的类型可以用 *T 的文法。（此外，T 不能是像 *int 这样的指针。）
+// 指针接收者的方法可以修改接收者指向的值（就像 Scale 在这做的）。由于方法经常需要修改它的接收者，指针接收者比值接收者更常用。
+// 普通接受者不可以修改
+func (v Vertex) Abs() float64 {
+	return math.Sqrt(v.X*v.X + v.Y*v.Y)
+}
+
+func (v *Vertex) Scale(f float64) {
+	v.X = v.X * f
+	v.Y = v.Y * f
+}
+
+func main() {
+	v := Vertex{3, 4}
+	v.Scale(10)
+	fmt.Println(v.Abs())
+}
+
+// 比较前两个程序，你大概会注意到带指针参数的函数必须接受一个指针：
+
+var v Vertex
+ScaleFunc(v, 5)  // 编译错误！
+ScaleFunc(&v, 5) // OK
+
+// 而以指针为接收者的方法被调用时，接收者既能为值又能为指针：
+var v Vertex
+v.Scale(5)  // OK
+p := &v
+p.Scale(10) // OK
+
+// 即便 v 是个值而非指针，带指针接收者的方法也能被直接调用。 
+// 也就是说，由于 Scale 方法有一个指针接收者，为方便起见，
+// Go 会将语句 v.Scale(5) 解释为 (&v).Scale(5)
+// 相反竟然也可以, 而以值为接收者的方法被调用时，接收者既能为值又能为指针
+
+// 使用指针接收者的原因有二：
+// 首先，方法能够修改其接收者指向的值。
+// 其次，这样可以避免在每次调用方法时复制该值。若值的类型为大型结构体时，这样做会更加高效
+```
+* 接口
+```go
+// 隐式接口从接口的实现中解耦了定义，这样接口的实现可以出现在任何包中，无需提前准备。
+// 接口也是值。它们可以像其它值一样传递。
+// 接口值可以用作函数的参数或返回值。
+// 在内部，接口值可以看做包含值和具体类型的元组：
+// (value, type)
+// 接口值保存了一个具体底层类型的具体值。
+// 接口值调用方法时会执行其底层类型的同名方法。
+fmt.Printf("(%v, %T)\n", i, i)
+// (&{Hello}, *main.T)
+// 空接口:
+func describe(i interface{}) {
+	fmt.Printf("(%v, %T)\n", i, i)
+}
+// (<nil>, <nil>)
+```
+* 断言
+```go
+func main() {
+	var i interface{} = "hello"
+
+	s := i.(string)
+	fmt.Println(s)
+
+	s, ok := i.(string)
+	fmt.Println(s, ok)
+
+	f, ok := i.(float64)
+	fmt.Println(f, ok)
+
+	f = i.(float64) // 报错(panic)
+	fmt.Println(f)
+}
+```
+*  
 
 ## 遇到的问题
 ```
